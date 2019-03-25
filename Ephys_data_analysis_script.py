@@ -5,17 +5,13 @@ Created on Sat Jan  5 11:12:24 2019
 
 @author: anzal
 """
-import os
+import sys
 import pandas as pd
 import matplotlib.pyplot as plt
 import pyabf
 import neo 
-import stfio
 
-os.chdir('/Users/anzal/Documents/NCBS/UPi_lab work/patch_data/02_01_2018/')
-
-
-abf = pyabf.ABF("19102001.abf")
+abf = pyabf.ABF(sys.argv[1])
 abf.setSweep(3)
 print(abf.sweepY) # sweep data (ADC)
 print(abf.sweepC) # sweep command (DAC)
