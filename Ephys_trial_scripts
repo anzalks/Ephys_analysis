@@ -1,0 +1,29 @@
+import os
+dir_home = "/home/anzal/Documents/Work/python"
+os.chdir(dir_home)
+
+extension = 'atf'
+
+file_list = []
+for root, dirs, files in os.walk("./", topdown = False):
+   for name in files:
+       if name.endswith('.' + extension):
+           file_list.append(os.path.join(root, name))
+
+
+import pandas as pd
+
+df = pd.read_table(file_list[0])
+traces = df[8:]
+
+import scipy
+peaks_index = scipy.signal.find_peaks(traces['1'])
+__main__:16: FutureWarning: read_table is deprecated, use read_csv instead, passing sep='\t'.
+/usr/lib/python3/dist-packages/IPython/core/interactiveshell.py:2718: DtypeWarning: Columns (0,1) have mixed types. Specify dtype option on import or set low_memory=False.
+  interactivity=interactivity, compiler=compiler, result=result)
+Traceback (most recent call last):
+
+  File "<ipython-input-3-5c8b06561a2b>", line 20, in <module>
+    peaks_index = scipy.signal.find_peaks(traces['1'])
+
+AttributeError: module 'scipy' has no attribute 'signal'
