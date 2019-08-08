@@ -1,4 +1,4 @@
-# Using ephyview 
+# Visualize data  (using ephyview)
 
 1. Install `ephyview`
 
@@ -7,4 +7,3 @@
 2. Launch it
 
      $ ephyview 
-
