@@ -18,9 +18,9 @@ import neo.io as nio
 import matplotlib.pyplot as plt
 
 #set the directory path with files to read
-folder_to_read = "/mnt/5D4B-FA71/Data/190809/"
+folder_to_read = "/mnt/5D4B-FA71/Data/190924/"
 #make a folder to save all the results
-os.mkdir(folder_to_read+'Results/')
+#os.mkdir(folder_to_read+'Results/')
 #make the file path
 results_folder = str(folder_to_read+'Results/')
 #list out all the files with .dat extension for plotting
@@ -39,15 +39,25 @@ for root, dirs, files in os.walk(folder_to_read):
                 analog_signals = segment.analogsignals
                 print(analog_signals)
                 for trace in analog_signals:
+                    print(trace)
+#                    for trace_no in trace:
+#                        v = trace_no
+#                        print(v)
                     v = trace
                     print(v)
 #                    if np.isnan(trace).all() == np.nan:
 #                       break
 #                       v = trace
                     plt.plot(v)
+                    plt.title('recording type: '+str(trace.name).split("-")[0]+' '+str(len(analog_signals))+' '+'traces'+' '+'_compiled')
+                    plt.ylabel('Amplitude of signal: '+str(trace[0]).split()[1])
+                    plt.xlabel('time (mS)')
+                    #plt.tight_layout()
+                    plt.legend()
             #save the figure in the results folder with png as extension, fiile name, Key detail(trace number)     
             plt.savefig(results_folder+file_name+" "+'_compiled.png')
             plt.show()
+            plt.close()
             for segment in segments:
                 print(segment)
                 analog_signals = segment.analogsignals
@@ -60,5 +70,11 @@ for root, dirs, files in os.walk(folder_to_read):
 #                        v = trace
                     print (v)
                     plt.plot(v)
-                    plt.savefig(results_folder+file_name+" "+str(trace.name)+" "+channel_index+""+str(trace.t_start)+'.png')
+                    plt.title('recording type: '+str(trace.name).split("-")[0]+' '+'single_trace'+' '+'from the channel: '+ str(channel_index))
+                    plt.ylabel('Amplitude of signal: '+str(trace[0]).split()[1])
+                    plt.xlabel('time (mS)')
+                    plt.tight_layout()
+                    plt.legend()
+                    plt.savefig(str(results_folder)+str(file_name)+"_"+str(trace.name)+"_"+"from_the_channel_"+channel_index+str(trace.t_start)+".png")
                     plt.show()
+                    plt.close()
