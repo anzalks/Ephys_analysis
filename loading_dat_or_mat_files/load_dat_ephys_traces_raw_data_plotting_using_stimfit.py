@@ -20,7 +20,7 @@ import neo.io as nio
 import matplotlib.pyplot as plt
 
 #set the directory path with files to read
-folder_to_read = "/mnt/5D4B-FA71/Data/190814/"
+folder_to_read = "/mnt/5D4B-FA71/Data/190822/"
 #list out all the files with .mat extension for plotting
 for root, dirs, files in os.walk(folder_to_read):
     for file in files:

@@ -93,20 +93,18 @@ for root, dirs, files in os.walk(folder_to_read):
 #            plt.show()
 #            plt.close()
             for segment in segments[4:5]:
-#                print(segment)
                 analog_signals = segment.analogsignals
-#                print(analog_signals)
                 for trace in analog_signals:
                     iteration_number += 1
                     v = trace
                     v = np.ravel(v)
-#                    print(v)
                     if '1.0 mV' == str(v.units):
                         continue
                     if np.isnan(v)[0] == True:
                         continue
                     protocol_type = 'Voltage_clamp'
                     v = v.magnitude
+                    t = np.arange(0, len(v)/20000.0, 1.0/20000)
                     v_filtered = signal.sosfilt(b_filter, v)
 
                     aI, bI = 650000, 657000
@@ -117,16 +115,15 @@ for root, dirs, files in os.walk(folder_to_read):
                     ax1.legend()
 
                     ax2 = plt.subplot(212)
-                    ax2.plot(t[aI:bI], v_filtered[aI:bI]
-                            , label = 'trace numer = '+str(iteration_number))
+                    ax2.plot(t[aI:bI]
+                            , v_filtered[aI:bI]
+                            , label='Trace numer = '+str(iteration_number))
                     ax2.legend()
 
                     # PEAKS
                     maxP, minP = analytic_wfm.peakdetect(v_filtered[aI:bI], t[aI:bI])
-
-            
+                    minP = [x for x in minP if abs(x[1]) > 10]
                     x, y = zip(*minP)
                     plt.plot(x, y, 'o')
-                    
                     plt.tight_layout()
                     plt.savefig('a.png')
