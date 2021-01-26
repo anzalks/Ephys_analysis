@@ -11,31 +11,55 @@ from pathlib import Path
 import neo.io as nio
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 import neo.io as nio
-from allensdk.ephys.ephys_extractor import EphysSweepFeatureExtractor as extractor
+import scipy.signal as signal
 from pprint import pprint
 
 class Args: pass 
 args_ = Args()
 
+def butter_bandpass(lowcut, highcut, fs, order=5):
+    nyq = 0.5 * fs
+    low = lowcut / nyq
+    high = highcut / nyq
+    b, a = signal.butter(N=order, Wn=[low, high], btype='bandpass')
+    return b, a
+
+
+def butter_bandpass_filter(data, lowcut, highcut, fs, order=5):
+    b, a = butter_bandpass(lowcut, highcut, fs, order=order)
+    y = signal.lfilter(b, a, data)
+    return y
 
 def input_R_protocol(f, fi, Vm_trail, sampling_rate,trace_unit, protocol_unit):
     fig = plt.figure(figsize=(16,5))
     ax1 = fig.add_subplot(121)
     ax2 = fig.add_subplot(122)
-    pprint(Vm_trail)
+    iter_num = 0
+    mean_R=[]
     for v in  enumerate(Vm_trail):
+        iter_num +=1
         trace_number = v[0]
         trace = v[1][0]
         time = v[1][1]
-        input_R = ((np.min(trace) - np.max(trace))*1000)/(-50)
-        ax1.plot(time, trace)
+        Vb= np.mean(trace[int(sampling_rate*0.35):int(sampling_rate*0.38)])
+        Vl= np.mean(trace[int(sampling_rate*0.15):int(sampling_rate*0.20)])
+        input_R = (np.around((Vb-Vl),decimals=2)*1000)/(50)
+        mean_R.append(input_R)
+        if iter_num ==2:
+            ax1.plot(time, trace, label = f'trace no. {iter_num}', alpha = 0.7)
+            ax1.scatter(time[int(sampling_rate*0.35)],Vb, color = 'r', 
+                        label ='baseline')
+            ax1.scatter(time[int(sampling_rate*0.20)],Vl, color = 'k', 
+                             label ='input_V')
         P_traces= protocols[0]
         for p in P_traces:
             for i in p:
                 t_ = len(i)/sampling_rate
                 t = np.linspace(0,float(t_), len(i))
                 ax2.plot(t,i)
+    mean_R = np.mean(mean_R)
     ax1.set_title('Recording')
     ax1.set_ylabel(trace_unit)
     ax1.set_xlabel('time(s)')
@@ -44,8 +68,8 @@ def input_R_protocol(f, fi, Vm_trail, sampling_rate,trace_unit, protocol_unit):
     ax2.set_ylabel(protocol_unit)
     ax2.set_xlabel('time(s)')
     #        ax2.legend()
-    plt.figtext(0.10,-0.05, "Input resistance = "+
-                str(np.around(input_R,decimals =2))+" MOhm", fontsize=12, va="top", ha="left")
+    plt.figtext(0.10,-0.05, f"Input resistance (averaged from {iter_num} traces) = "+
+                str(np.around(mean_R,decimals =2))+" MOhm ", fontsize=12, va="top", ha="left")
     plt.suptitle(f'Protocol type: {protocol_type} - {protocol_used}',fontsize=15)
     plt.figtext(0.10, -0.10, f"sampling rate = {sampling_rate}" ,
                 fontsize=12, va="top", ha="left" )
@@ -56,34 +80,45 @@ def input_R_protocol(f, fi, Vm_trail, sampling_rate,trace_unit, protocol_unit):
     plt.savefig(outfile,bbox_inches = 'tight')
     print("-----> Saved to %s" % outfile)
     fig = plt.close()
-    plt.clf()
+
 
 def Base_line_protocol(f, fi, Vm_trail, sampling_rate,trace_unit, protocol_unit):
     fig = plt.figure(figsize=(16,5))
     ax1 = fig.add_subplot(121)
     ax2 = fig.add_subplot(122)
+    RMP = []
+    iter_num = 0
     for v in  enumerate(Vm_trail):
         trace_number = v[0]
         trace = v[1][0]
         time = v[1][1]
         mean_RMP = np.mean(trace)
-        ax1.plot(time, trace)
-        P_traces= protocols[0]
-        for p in P_traces:
-            for i in p:
-                t_ = len(i)/sampling_rate
-                t = np.linspace(0,float(t_), len(i))
-                ax2.plot(t,i)
+        if mean_RMP <-50:
+            iter_num +=1
+            ax1.plot(time, trace, label=f'trace no. {iter_num}', alpha = 0.5)
+            P_traces= protocols[0]
+            RMP = mean_RMP
+            for p in P_traces:
+                for i in p:
+                    t_ = len(i)/sampling_rate
+                    t = np.linspace(0,float(t_), len(i))
+                    ax2.plot(t,i)
+#        First_inj = mpatches.Patch(color='green', label='First injection')
+#        Thres_inj = mpatches.Patch(color='black', label='Threshold injection')
+#        Last_inj = mpatches.Patch(color='red', label='Final injection')
+#        ax2.legend(handles=[First_inj,Thres_inj,Last_inj])
     ax1.set_title('Recording')
     ax1.set_ylabel(trace_unit)
     ax1.set_xlabel('time(s)')
     ax1.legend()
+    ax1.set_ylim(-90,-20)
     ax2.set_title('Protocol trace')
     ax2.set_ylabel(protocol_unit)
     ax2.set_xlabel('time(s)')
     #        ax2.legend()
-    plt.figtext(0.10,-0.05, "Resting membrane potential = "+
-                str(np.around(mean_RMP,decimals =2))+"mV", fontsize=12, va="top", ha="left")
+    plt.figtext(0.10,-0.05, "Resting membrane potential average from"
+                f" {iter_num} traces= "+
+                str(np.around(RMP,decimals = 2))+" mV", fontsize=12, va="top", ha="left")
     plt.suptitle(f'Protocol type: {protocol_type} - {protocol_used}',fontsize=15)
     plt.figtext(0.10, -0.10, f"sampling rate = {sampling_rate}" ,
                 fontsize=12, va="top", ha="left" )
@@ -93,99 +128,110 @@ def Base_line_protocol(f, fi, Vm_trail, sampling_rate,trace_unit, protocol_unit)
     plt.savefig(outfile,bbox_inches = 'tight')
     print("-----> Saved to %s" % outfile)
     fig = plt.close()
-    plt.clf()
 
-def threshold_protocol(f, fi, Vm_trail, sampling_rate,trace_unit, protocol_unit):
+def threshold_protocol(f, fi, Vm_trail, sampling_rate,trace_unit,
+                       protocol_unit):
+    global Threshold_voltage
     fig = plt.figure(figsize=(16,5))
     ax1 = fig.add_subplot(121)
     ax2 = fig.add_subplot(122)
     thresh_state = 0
+    iter_num = 0
+    trace_num = 0
     for v in  enumerate(Vm_trail):
+        iter_num +=1
         trace_number = v[0]
         trace = v[1][0]
         time = v[1][1]
-        trace_features(trace,time,thresh_state)
-        try:
-            print("***************")
-            print(neuron_threshold_v,neuron_threshold_t,Threshold_voltage)
-            print("*********")
-        except:
-            continue
-        if Threshold_voltage != 'NA':
-            try:
-                Vm_i = np.mean(trace[0:299])
-                Vm_f = np.mean(trace[len(trace)-300:len(trace)])
-                del_Vm = Vm_f - Vm_i
-                del_Vm = str(np.around(del_Vm,decimals =2))
-
-                ax1.plot(neuron_threshold_t, neuron_threshold_v, 'o', color =
-                         'k', label = "first firing")
+        v = np.copy(trace)
+        t = np.copy(time)
+        if thresh_state == 0:
+            Vm = str(np.around(np.mean(v[0:299]),decimals=2))
+            del_Vm = str(np.around((np.mean(v[len(v)-300:len(v)])-
+                                np.mean(v[0:299])), decimals= 2))
+            v_lowercut = v
+            t = time
+            v_lowercut[v_lowercut<-50] = -50
+            v_smooth = butter_bandpass_filter(v_lowercut,1, 500, sampling_rate, order=1)
+            peaks = signal.find_peaks(x=v_smooth, height=None,  threshold=None, distance=None, 
+                                      prominence=5, width=None, wlen=None, rel_height=0.5, 
+                                      plateau_size=None)
+            v_cut = butter_bandpass_filter(v_smooth,50, 500, sampling_rate, order=1)
+            v_peaks = v_smooth
+            t_peaks = t
+            thr_peak = 3
+            if trace[peaks[0]].any() >0:
+                thresh_state = 1
+                dv = np.diff(v_smooth)
+                dt = np.diff(t)
+                dv_dt = dv/dt
+                dv_dt_max = np.max(dv/dt)
+                v_dt_max = np.where(dv_dt == dv_dt_max)[0]-20
+                t_dt_max = np.where(dv_dt == dv_dt_max)[0]-20
+                ax1.scatter(time[peaks[0]-10], trace[peaks[0]-10], color='r', label = 'spike')
+                ax1.plot(t, v,alpha = 0.5, label = 'smoothened')
+                ax1.plot(time, trace, alpha = 0.5, label=f'raw trace no. {iter_num}')
+                ax1.scatter(time[t_dt_max],trace[v_dt_max], label = "threshold",
+                            color = 'k')
+                Threshold_voltage = "firing threshold = "+str(np.around(trace[v_dt_max][0],
+                                                                        decimals=2))
+                trace_num = iter_num
                 plt.figtext(0.10,0.0, Threshold_voltage+"mV", fontsize=12,
                             va="top", ha="left")
-                plt.figtext(0.10,-0.05, "membrane voltage difference = "+
+                plt.figtext(0.10,-0.05, "membrane voltage = "+
+                            Vm +"mV", fontsize=12, va="top", ha="left")
+                plt.figtext(0.10,-0.10, "membrane voltage difference = "+
                             del_Vm +"mV", fontsize=12, va="top", ha="left")
-                ax1.plot(time, trace)
-            except:
-                plt.figtext(0.10,0.0, "There was no firing in this neuron", fontsize=12,
-                            va="top", ha="left")
-                print("plotting hindered")
-                pass
-        else:
-            pass
         P_traces= protocols[0]
+        iter_num_p = 0
+        Threshold_injection = "NA"
         for p in P_traces:
-            for i in p:
-                t_ = len(i)/sampling_rate
-                t = np.linspace(0,float(t_), len(i))
-                ax2.plot(t,i)
-        ax1.set_title('Recording')
-        ax1.set_ylabel(trace_unit)
-        ax1.set_xlabel('time(s)')
-        ax1.legend()
-        ax2.set_title('Protocol trace')
-        ax2.set_ylabel(protocol_unit)
-        ax2.set_xlabel('time(s)')
-        #        ax2.legend()
+            iter_num_p +=1
+            if iter_num_p == 1:
+                for i in p:
+                    t_ = len(i)/sampling_rate
+                    t = np.linspace(0,float(t_), len(i))
+                    ax2.plot(i, color = 'g')
+
+            elif iter_num_p == trace_num:
+                c_inj = []
+                for i in p:
+                    t_ = len(i)/sampling_rate
+                    t = np.linspace(0,float(t_), len(i))
+                    ax2.plot(i, color = 'k')
+                    c_inj.append(i)
+                Threshold_injection = "Injected current at threshold =  "+ str(np.max(c_inj))
+
+            elif iter_num_p == len(P_traces):
+                for i in p:
+                    t_ = len(i)/sampling_rate
+                    t = np.linspace(0,float(t_), len(i))
+                    ax2.plot(i, color = 'r')
+            First_inj = mpatches.Patch(color='green', label='First injection')
+            Thres_inj = mpatches.Patch(color='black', label='Threshold injection')
+            Last_inj = mpatches.Patch(color='red', label='Final injection')
+            ax2.legend(handles=[First_inj,Thres_inj,Last_inj])
+
+
+    plt.figtext(0.55,0.0, Threshold_injection+"pA", fontsize=12,
+                va="top", ha="left")
+    ax1.set_title('Recording')
+    ax1.set_ylabel(trace_unit)
+    ax1.set_xlabel('time(s)')
+    ax1.legend()
+    ax2.set_title('Protocol trace')
+    ax2.set_ylabel(protocol_unit)
+    ax2.set_xlabel('time(s)')
+    #        ax2.legend()
     plt.suptitle(f'Protocol type: {protocol_type} - {protocol_used}',fontsize=15)
-    plt.figtext(0.10, -0.10, f"sampling rate = {sampling_rate}" ,
+    plt.figtext(0.10, -0.15, f"sampling rate = {sampling_rate}" ,
                 fontsize=12, va="top", ha="left" )
-    plt.figtext(0.10, -0.15, f"total recording time = {total_time}" ,
+    plt.figtext(0.10, -0.20, f"total recording time = {total_time}" ,
                 fontsize=12, va="top", ha="left")
     outfile = str(outdir)+"/"+str(f.stem)+ f" {protocol_used}_{fi}.png"
     plt.savefig(outfile,bbox_inches = 'tight')
     print("-----> Saved to %s" % outfile)
     fig = plt.close()
-    plt.clf()
-
-def trace_features(trace, time, thresh_state):
-    global neuron_threshold_v
-    global neuron_threshold_t
-    global Threshold_voltage
-    Threshold_voltage = 'NA'
-    try:
-        Trace_with_features = extractor(t=time, v=trace, 
-                                        filter = float(sampling_rate)/2500,min_peak=-20.0, 
-                                        dv_cutoff=20.0, max_interval=0.005, min_height=2.0, 
-                                        thresh_frac=0.05, baseline_interval=0.1, 
-                                        baseline_detect_thresh=0.3, id=None)
-        Trace_with_features.process_spikes()
-        neuron_threshold_v = Trace_with_features.spike_feature("threshold_v")
-        neuron_threshold_t = Trace_with_features.spike_feature("threshold_t")
-        if thresh_state == 0 and len(neuron_threshold_v) <=1:
-                     neuron_threshold_v = Trace_with_features.spike_feature("threshold_v")[0]
-                     neuron_threshold_t = Trace_with_features.spike_feature("threshold_t")[0]
-                     Threshold_voltage = str('threshold voltage = '
-                                             +str(np.around(neuron_threshold_v, decimals = 2)))
-
-                     thresh_state= 1
-        else:
-            neuron_threshold_v = np.nan
-            neuron_threshold_t = np.nan
-            Threshold_voltage = 'NA'
-    except Exception as e:
-        pass
-#        print("Threshold can't be found :", e)
-
 
 def List_files(p):
     global f_list
@@ -255,6 +301,7 @@ def protocol_ckecker(protocol_type, protocols):
                   f"like this {protocols}")
             trace_min = np.nan
         if len_proto == 20:
+            print("00000000000000000000000")
             protocol_used = 'Threshold_check'
             print(f"the current clamp protcol '{protocol_used}' has"
                   f" {len_proto} traces in the protocol")
@@ -284,7 +331,6 @@ def protocol_ckecker(protocol_type, protocols):
     print("*****")
     return protocol_used
 
-
 def main(**kwargs):
     p = Path(kwargs['folder_path'])
     outdir = p/'results'
@@ -296,17 +342,14 @@ def main(**kwargs):
         protocol_class(f)
         protocol_ckecker(protocol_type, protocols)
         if protocol_used == 'Threshold_check':
-#            continue
-            threshold_protocol(f, fi, Vm_trail, sampling_rate,trace_unit, protocol_unit)
+            threshold_protocol(f, fi, Vm_trail, sampling_rate,trace_unit,
+                               protocol_unit)
         elif protocol_used == 'Base_line_V':
             Base_line_protocol(f, fi, Vm_trail, sampling_rate,trace_unit, protocol_unit)
         elif protocol_used == 'input_res_check':
             input_R_protocol(f, fi, Vm_trail, sampling_rate,trace_unit, protocol_unit)
         else:
             print("not threshold")
-        
-
-
 
 if __name__  == '__main__':
     import argparse
@@ -318,4 +361,6 @@ if __name__  == '__main__':
             , help = 'path of folder with  abf files '
             )
     parser.parse_args(namespace=args_)
-    main(**vars(args_))
+    main(**vars(args_)) 
+
+

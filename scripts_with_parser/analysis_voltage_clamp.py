@@ -22,7 +22,8 @@ f_list = []
 print(f_list,'...')
 def main(**kwargs):
     p = Path(kwargs['folder_path'])
-    f_list=list(p.glob('**/*abf'))
+#    f_list=list(p.glob('**/*abf'))
+    f_list=list(p.glob('**/*dat'))
     outdir = p/'results'
     outdir.mkdir(exist_ok=True, parents=True)
     for fi, f in enumerate(f_list):
@@ -32,6 +33,7 @@ def main(**kwargs):
         Vm_trail = []    
         f_path = f
         f = str(f)
+#        segments = nio.StimfitIO(f).read_block().segments
         segments = nio.StimfitIO(f).read_block().segments
         fig = plt.figure(figsize=(8,5))
         thresh_state = 0
@@ -39,7 +41,7 @@ def main(**kwargs):
         for si, segment in  enumerate(segments):
             seg_no +=1
             fI = 10000*fi + si
-            #print('analysing the segment ',segment)
+            print('analysing the segment ',segment)
             analog_signals = segment.analogsignals
             #print(analog_signals)
             for ti, trace in enumerate(analog_signals):
@@ -63,19 +65,19 @@ def main(**kwargs):
                 ti = trace.t_start
                 t = np.linspace(0,float(tf - ti), len(v))
                 ax.plot(t,v,label = 'trace numer = '+str(itr_no))
-                try:
-                 Trace_with_features = extractor(t=t, v=v, filter = float(trace.sampling_rate)/2500,min_peak=-20.0, dv_cutoff=20.0, max_interval=0.005, min_height=2.0, thresh_frac=0.05, baseline_interval=0.1, baseline_detect_thresh=0.3, id=None)
-                 Trace_with_features.process_spikes()
-                 neuron_threshold_v = Trace_with_features.spike_feature("threshold_v")
-                 if thresh_state == 0 and len(neuron_threshold_v) >=1:
-                     neuron_threshold_v = Trace_with_features.spike_feature("threshold_v")[0]
-                     neuron_threshold_t = Trace_with_features.spike_feature("threshold_t")[0]
-                     Threshold_voltage = str('threshold voltage ' +str(np.around(neuron_threshold_v, decimals = 2))+"mV")
-                     ax.plot(neuron_threshold_t,neuron_threshold_v,'o', color ='k',label = 'Firing threshold')
-                     plt.figtext(.05, 0.0, Threshold_voltage +"mV",fontsize=12, va="top", ha="left") 
-                     thresh_state = 1
-                except Exception as e:
-                     print('Could not be plotted:', e)
+#                try:
+#                 Trace_with_features = extractor(t=t, v=v, filter = float(trace.sampling_rate)/2500,min_peak=-20.0, dv_cutoff=20.0, max_interval=0.005, min_height=2.0, thresh_frac=0.05, baseline_interval=0.1, baseline_detect_thresh=0.3, id=None)
+#                 Trace_with_features.process_spikes()
+#                 neuron_threshold_v = Trace_with_features.spike_feature("threshold_v")
+#                 if thresh_state == 0 and len(neuron_threshold_v) >=1:
+#                     neuron_threshold_v = Trace_with_features.spike_feature("threshold_v")[0]
+#                     neuron_threshold_t = Trace_with_features.spike_feature("threshold_t")[0]
+#                     Threshold_voltage = str('threshold voltage ' +str(np.around(neuron_threshold_v, decimals = 2))+"mV")
+#                     ax.plot(neuron_threshold_t,neuron_threshold_v,'o', color ='k',label = 'Firing threshold')
+#                     plt.figtext(.05, 0.0, Threshold_voltage +"mV",fontsize=12, va="top", ha="left") 
+#                     thresh_state = 1
+#                except Exception as e:
+#                     print('Could not be plotted:', e)
         ax.legend()
         ax.set_ylabel('signal amplitude in '+str(trace[0]).split()[1])
         ax.set_xlabel('time (s)')
@@ -123,27 +125,27 @@ def main(**kwargs):
                 Vm_f = np.mean(v[len(v)-300:len(v)])
                 del_Vm = Vm_f-Vm_i
                 ax1.plot(t,v,label = 'trace numer = '+str(itr_no))
-                plt.figtext(0.05, 0.00, 'sampling rate* total time = ' + str(np.around(float(trace.sampling_rate)*(float(tf-ti)),decimals=2)),fontsize=12, va="top", ha="left")   
-                plt.figtext(0.05, -0.05, 'sampling rate = ' + str(trace.sampling_rate),fontsize=12, va="top", ha="left")
-                plt.figtext(0.05, -0.10, 'total time of recording = ' + str(np.around(tf-ti, decimals=2)),fontsize=12, va="top", ha="left")
-                plt.figtext(0.05, -0.15, 'Number of data points in the trace = ' + str(len(v)),fontsize=12, va="top", ha="left")
-                plt.figtext(0.05, -0.20, 'membrane voltage variation : ' + str(np.around(del_Vm, decimals = 2))+trace_unit,fontsize=12, va="top", ha="left")
-                plt.figtext(0.05, -0.25, 'membrane voltage after : ' + str(np.around(Vm_f,decimals = 1))+trace_unit,fontsize=12, va="top", ha="left")
-                plt.figtext(0.05, -0.30, 'membrane voltage before : ' + str(np.around(Vm_i,decimals =1))+trace_unit,fontsize=12, va="top", ha="left")
-                try:
-                 Trace_with_features = extractor(t=t, v=v, filter = float(trace.sampling_rate)/2500,min_peak=-20.0, dv_cutoff=20.0, max_interval=0.005, min_height=2.0, thresh_frac=0.05, baseline_interval=0.1, baseline_detect_thresh=0.3, id=None)
-                 Trace_with_features.process_spikes()
-                 neuron_threshold_v = Trace_with_features.spike_feature("threshold_v")
-                 if thresh_state == 0 and len(neuron_threshold_v) >=1:
-                     neuron_threshold_v = Trace_with_features.spike_feature("threshold_v")[0]
-                     neuron_threshold_t = Trace_with_features.spike_feature("threshold_t")[0]
-                     Threshold_voltage = str('threshold voltage = ' +str(np.around(neuron_threshold_v, decimals = 2))+"mV")
-                     ax1.plot(neuron_threshold_t,neuron_threshold_v,'o', color ='r',label = 'Firing Threshold')
-                     plt.figtext(.05, -0.35, Threshold_voltage +"mV",fontsize=12, va="top", ha="left")                     
-                     thresh_state = 1
-                except Exception as e:
-                     print('Could not be plotted:', e)
-                ax1.legend()
+#                plt.figtext(0.05, 0.00, 'sampling rate* total time = ' + str(np.around(float(trace.sampling_rate)*(float(tf-ti)),decimals=2)),fontsize=12, va="top", ha="left")   
+#                plt.figtext(0.05, -0.05, 'sampling rate = ' + str(trace.sampling_rate),fontsize=12, va="top", ha="left")
+#                plt.figtext(0.05, -0.10, 'total time of recording = ' + str(np.around(tf-ti, decimals=2)),fontsize=12, va="top", ha="left")
+#                plt.figtext(0.05, -0.15, 'Number of data points in the trace = ' + str(len(v)),fontsize=12, va="top", ha="left")
+#                plt.figtext(0.05, -0.20, 'membrane voltage variation : ' + str(np.around(del_Vm, decimals = 2))+trace_unit,fontsize=12, va="top", ha="left")
+#                plt.figtext(0.05, -0.25, 'membrane voltage after : ' + str(np.around(Vm_f,decimals = 1))+trace_unit,fontsize=12, va="top", ha="left")
+#                plt.figtext(0.05, -0.30, 'membrane voltage before : ' + str(np.around(Vm_i,decimals =1))+trace_unit,fontsize=12, va="top", ha="left")
+#                try:
+#                 Trace_with_features = extractor(t=t, v=v, filter = float(trace.sampling_rate)/2500,min_peak=-20.0, dv_cutoff=20.0, max_interval=0.005, min_height=2.0, thresh_frac=0.05, baseline_interval=0.1, baseline_detect_thresh=0.3, id=None)
+#                 Trace_with_features.process_spikes()
+#                 neuron_threshold_v = Trace_with_features.spike_feature("threshold_v")
+#                 if thresh_state == 0 and len(neuron_threshold_v) >=1:
+#                     neuron_threshold_v = Trace_with_features.spike_feature("threshold_v")[0]
+#                     neuron_threshold_t = Trace_with_features.spike_feature("threshold_t")[0]
+#                     Threshold_voltage = str('threshold voltage = ' +str(np.around(neuron_threshold_v, decimals = 2))+"mV")
+#                     ax1.plot(neuron_threshold_t,neuron_threshold_v,'o', color ='r',label = 'Firing Threshold')
+#                     plt.figtext(.05, -0.35, Threshold_voltage +"mV",fontsize=12, va="top", ha="left")                     
+#                     thresh_state = 1
+#                except Exception as e:
+#                     print('Could not be plotted:', e)
+#                ax1.legend()
                 ax1.set_ylabel('signal amplitude in '+str(trace[0]).split()[1])
                 ax1.set_xlabel('time (s)')
                 ax1.set_ylim([-100,60])
