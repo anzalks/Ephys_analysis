@@ -56,6 +56,7 @@ def data_file_filter(f_list):
             r.append(f)
     f_list = r
     f_list.sort()
+    del(reader)
 #    print(f"length of file list later{len(f_list)}")
     return f_list
 
@@ -70,6 +71,7 @@ def protocol_name(f):
     protocol_num = protocol_name.split("_")[0]
     print(f"number of protocols used in total = {protocol_num}")
     print(f"names of protocols used in total = {protocol_name}")
+    del(reader)
     return protocol_num, protocol_name
 
 def tot_prot_num(f_list):
@@ -97,7 +99,8 @@ def cell_sorted_results(outdir,cell_set):
     cell_nos = list(np.arange(len(cell_set)))
     for cell in cell_nos:
         Path.mkdir(Path.joinpath(outdir,f'cell_{cell}'),exist_ok=True, parents=True)
-        
+
+
 
 
 def total_trace(f):
@@ -126,8 +129,13 @@ def total_trace(f):
             m = [v,t]
             Vm_trail.append(m)
             total_time = float(tf-ti)
+    del(reader)
     return Vm_trail
 
+def series_res_check(f):
+    fig = plt.figure(figsize=(16,5))
+    ax1 = fig.add_subplot(121)
+    ax2 = fig.add_subplot(122)
 
 
 def Channel_fetcher(f):
@@ -142,6 +150,7 @@ def Channel_fetcher(f):
     chan_num =len(reader.read_block(signal_group_mode='split-all').segments[0].analogsignals)
     int(chan_num)
     seg_no = len(reader.read_block(signal_group_mode='split-all').segments)
+    del(reader)
     return chan_num
 
 def main(**kwargs):
