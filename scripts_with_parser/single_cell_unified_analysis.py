@@ -100,6 +100,154 @@ def cell_sorted_results(outdir,cell_set):
     for cell in cell_nos:
         Path.mkdir(Path.joinpath(outdir,f'cell_{cell}'),exist_ok=True, parents=True)
 
+def raw_trace_plot(f, folder_path):
+# use folder path in the previous loop to make use of the cell_*** folder path
+# allocation 
+#    columns = int(len(Vm_trail)/3)
+    f = str(f)
+    Vm_trail = []
+    reader = nio.AxonIO(filename=f)
+    segments = reader.read_block().segments
+    sample_trace = segments.
+     rows = 3
+ #    v = np.reshape(Vm_trail[1],(columns,rows))
+ #    t = np.reshape(Vm_trail[0],(columns,rows))
+ #    print(v.shape())
+     print("_____________________")
+ #    print(f"reminder = {columns}")
+     fig, ax_array = plt.subplots(rows,2)
+     va_,vb_,vc_ = [],[],[]
+     ta_,tb_,tc_ = [],[],[]
+     na,nb,nc = 0,0,0
+     print(f"na {na} nb {nb} nc {nc}")
+
+     for ind_i,i in enumerate(Vm_trail):
+         r = ind_i%rows
+         a,b,c =(1%3,2%3,0)
+         v = Vm_trail[ind_i][0]
+         t = Vm_trail[ind_i][1]
+         if r == a:
+             na +=1
+             ta_.append(t)
+             va_.append(v)
+             ax_array[2][0].plot(t,v, alpha = 0.5)
+             if na == 3:
+                 va_ = np.mean(va_, axis = 0)
+                 ta_ = np.mean(ta_, axis = 0) 
+ #                print(ta_,va_)
+                 ax_array[2][0].plot(ta_,va_, color = 'b', linewidth=0.5)
+ 
+ 
+ #            ax_array[2].plot(Vm_trail[ind_i][1],Vm_trail[ind_i][0])
+ #            plt.subplot(rows,columns,ind_i)
+ #            plt.plot(Vm_trail[ind_i][1],Vm_trail[ind_i][0])
+         elif r == b:
+             nb +=1
+             vb_.append(v)
+             tb_.append(t)
+             ax_array[1][0].plot(t,v, alpha = 0.5)
+             if nb == 3:
+                 vb_ = np.mean(vb_, axis = 0)
+                 tb_ = np.mean(tb_, axis = 0) 
+ #                print(tb_,vb_)
+                 ax_array[1][0].plot(tb_,vb_, color = 'k', linewidth=0.5)
+ #                ax_array[1].plot(Vm_trail[ind_i][1],Vm_trail[ind_i][0])
+ #            plt.subplot(rows,columns,ind_i+1)
+ #            plt.plot(Vm_trail[ind_i][1],Vm_trail[ind_i][0])
+
+        elif r == b:
+             nb +=1
+             vb_.append(v)
+             tb_.append(t)
+             ax_array[1][0].plot(t,v, alpha = 0.5)
+             if nb == 3:
+                 vb_ = np.mean(vb_, axis = 0)
+                 tb_ = np.mean(tb_, axis = 0) 
+ #                print(tb_,vb_)
+                 ax_array[1][0].plot(tb_,vb_, color = 'k', linewidth=0.5)
+ #                ax_array[1].plot(Vm_trail[ind_i][1],Vm_trail[ind_i][0])
+ #            plt.subplot(rows,columns,ind_i+1)
+ #            plt.plot(Vm_trail[ind_i][1],Vm_trail[ind_i][0])
+         elif r == c:
+             nc +=1
+             vc_.append(v)
+             tc_.append(t)
+             ax_array[0][0].plot(t,v, alpha = 0.5, label=f'trial {nc}')
+             v_lowercut = np.copy(v)
+ #            v_lowercut[v_lowercut<-50] = -50
+             time = np.copy(t)
+             v_smooth = v_lowercut
+ #            v_smooth = np.ma.average(v_lowercut,axis=0)
+ #            v_smooth = butter_bandpass_filter(v_lowercut,1,20, sampling_rate, order=1)
+             peaks = signal.find_peaks(x=v_smooth, height=-80,  threshold=None,
+                                       distance=50,
+                                       prominence=2.5, width=100, wlen=None,
+                                       rel_height=1,plateau_size=None)
+ #            peaks_v = v_smooth
+ #            peaks_t = time
+             peaks_t = t[peaks[0]-10]
+             peaks_v = v[peaks[0]-10]
+             ax_array[0][1].scatter(peaks_t,peaks_v,alpha=0.5, marker='.', 
+                                    label = f'peak response in trial {nc}')
+             print(f"peaks = {peaks_v}, {peaks_t}")
+             if nc == 3:
+                 vc_ = np.mean(vc_, axis = 0)
+                 tc_ = np.mean(tc_, axis = 0) 
+ #                print(tc_,vc_)
+                 ax_array[0][0].plot(tc_,vc_, color = 'r', linewidth=0.5, label
+                                    = f'mean response for {nc} trails')
+                 ax_array[0][1].plot(tc_,vc_, color = 'r',alpha=0.3, linewidth=0.2)
+ #            plt.subplot(rows,columns,ind_i+2)
+ #            plt.plot(Vm_trail[ind_i][1],Vm_trail[ind_i][0])
+ 
+     ax_array[2][0].set_title('TTL')
+     ax_array[2][0].set_xlabel('time(s)')
+ #    ax_array[2].set_ylim(-0.5,2.5)
+ #    ax_array[2].set_xlim(0.2,0.5)
+     ax_array[2][0].set_ylabel('V')
+     ax_array[1][0].set_title('photo diode')
+ #    ax_array[1].set_ylim(2,7.5)
+ #    ax_array[1].set_xlim(0.2,0.5)
+     ax_array[1][0].set_ylabel('pA')
+     ax_array[0][0].set_title('cell trace')
+     ax_array[0][0].set_ylim(-100,5)
+     ax_array[0][0].set_ylabel('mV')
+ #    ax_array[0].set_xlim(0.2,0.5)
+ #    plt.title("three channel recordings")
+     ax_array[0][1].set_title('Response peak spread')
+     ax_array[0][1].set_xlabel('time(s)')
+     ax_array[0][1].set_ylim(-100,5)
+ 
+     ax_array[1,1].axis('off')
+     ax_array[2,1].axis('off')
+     fig.legend(title="Legend",borderaxespad=1, loc="lower right")
+     plt.tight_layout()
+ 
+     outfile  savefig(*args, **kwargs) em)+ f" blipo_col_realing_1_resized.png"
+     plt.savefig(outfile,bbox_inches = 'tight',dpi = (300))
+     plt.close()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -138,20 +286,7 @@ def series_res_check(f):
     ax2 = fig.add_subplot(122)
 
 
-def Channel_fetcher(f):
-    global seg_no
-    f= str(f)
-    reader = nio.AxonIO(f)
-    segments = reader.read_segment()
-    an_sig = segments.analogsignals
-    protocol_num = str(reader._axon_info['sProtocolPath']).split('\\')[-1]
-    protocol_num = int(protocol_num.split('_')[0])
-    chan_info = reader.header['signal_channels']
-    chan_num =len(reader.read_block(signal_group_mode='split-all').segments[0].analogsignals)
-    int(chan_num)
-    seg_no = len(reader.read_block(signal_group_mode='split-all').segments)
-    del(reader)
-    return chan_num
+
 
 def main(**kwargs):
     p = Path(kwargs['folder_path'])
