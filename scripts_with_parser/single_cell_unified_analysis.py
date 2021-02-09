@@ -106,9 +106,17 @@ def raw_trace_plot(f, folder_path):
 #    columns = int(len(Vm_trail)/3)
     f = str(f)
     Vm_trail = []
+    sampling_rate
+    trace_unit
+    total_time
     reader = nio.AxonIO(filename=f)
     segments = reader.read_block().segments
-    sample_trace = segments.
+    sample_trace = segments[0].analogsignals[0]
+    sampling_rate = sample_trace.sampling_rate
+    trace_unit = str(sample_trace.units).split()[1]
+    for si, segment in enumerate(segments):
+        analogsignals = segment.analogsignals
+        
      rows = 3
  #    v = np.reshape(Vm_trail[1],(columns,rows))
  #    t = np.reshape(Vm_trail[0],(columns,rows))
