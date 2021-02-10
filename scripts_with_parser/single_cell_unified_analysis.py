@@ -158,7 +158,7 @@ def raw_trace_plot(f):
     for si, segment in enumerate(segments):
         analog_signals = segment.analogsignals
         for trace in analog_signals:
-            print(f"length of each trace in the segments = {len(trace) }")
+            print(f"length of each trace in the segment = {len(trace) }")
             v = trace
             v = np.ravel(v)
             v = v.magnitude
@@ -168,6 +168,7 @@ def raw_trace_plot(f):
             m = [v,t]
             Vm_trail.append(m)
             total_time = float(tf-ti)
+    return Vm_trail
 
 
 
