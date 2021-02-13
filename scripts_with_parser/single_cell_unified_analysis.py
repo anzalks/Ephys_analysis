@@ -4,6 +4,9 @@ __copyright__        = "Copyright 2019-, Anzal KS"
 __maintainer__       = "Anzal KS"
 __email__            = "anzalks@ncbs.res.in"
 
+anupam is watching 
+
+
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=UserWarning)
@@ -141,7 +144,7 @@ def plot_selector(protocol_index):
 
 
 
-def raw_trace_plot(f):
+def raw_trace(f):
 # use folder path in the previous loop to make use of the cell_*** folder path
 # allocation 
 #    columns = int(len(Vm_trail)/3)
@@ -171,13 +174,6 @@ def raw_trace_plot(f):
     return Vm_trail
 
 
-
-
-
-
-
-
-
 def main(**kwargs):
     p = Path(kwargs['folder_path'])
     outdir = p/'results'
@@ -202,7 +198,9 @@ def main(**kwargs):
             print(f"protocol index = {protocol_index}")
             prot = plot_selector(protocol_index)
             print(f"selected protocol to plot = {prot}")
-            raw_trace_plot(f)
+            Vm_trail = raw_trace(f)
+
+
 #        for pn, protocol in enumerate (cell):
 #
 #plotting fucntion for each of the protocols            
