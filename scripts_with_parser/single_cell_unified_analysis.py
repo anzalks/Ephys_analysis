@@ -4,9 +4,6 @@ __copyright__        = "Copyright 2019-, Anzal KS"
 __maintainer__       = "Anzal KS"
 __email__            = "anzalks@ncbs.res.in"
 
-anupam is watching 
-
-
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=UserWarning)
@@ -142,6 +139,64 @@ def plot_selector(protocol_index):
         plot_function = "something not a protocol"
     return plot_function
 
+def series_res_check(Vm_trail,f,outdir):
+    f_str = str(f)
+    reader = nio.AxonIO(f_str)
+    protocols = reader.read_raw_protocol()
+    protocol_unit = clamp_stat = protocols[2][0]
+    segments = reader.read_block().segments
+    sample_trace = segments[0].analogsignals[0]
+    sampling_rate = sample_trace.sampling_rate
+    trace_unit = str(sample_trace.units).split()[1]
+    fig = plt.figure(figsize=(16,5))
+    ax1 = fig.add_subplot(121)
+    ax2 = fig.add_subplot(122)
+    iter_num = 0
+    mean_R=[]
+    for v in  enumerate(Vm_trail):
+        iter_num +=1
+        trace_number = v[0]
+        trace = v[1][0]
+        time = v[1][1]
+        Vb= np.mean(trace[int(sampling_rate*0.35):int(sampling_rate*0.38)])
+        Vl= np.mean(trace[int(sampling_rate*0.15):int(sampling_rate*0.20)])
+        input_R = (np.around((Vb-Vl),decimals=2)*1000)/(50)
+        mean_R.append(input_R)
+        if iter_num ==2:
+            ax1.plot(time, trace, label = f'trace no. {iter_num}', alpha = 0.7)
+            ax1.scatter(time[int(sampling_rate*0.35)],Vb, color = 'r', 
+                        label ='baseline')
+            ax1.scatter(time[int(sampling_rate*0.20)],Vl, color = 'k', 
+                             label ='input_V')
+        P_traces= protocols[0]
+        for p in P_traces:
+            for i in p:
+                t_ = len(i)/sampling_rate
+                t = np.linspace(0,float(t_), len(i))
+                ax2.plot(t,i)
+    mean_R = np.mean(mean_R)
+    ax1.set_title('Recording')
+    ax1.set_ylabel(trace_unit)
+    ax1.set_xlabel('time(s)')
+    ax1.legend()
+    ax2.set_title('Protocol trace')
+    ax2.set_ylabel(protocol_unit)
+    ax2.set_xlabel('time(s)')
+    #        ax2.legend()
+    plt.figtext(0.10,-0.05,f"Input resistance (averaged from {iter_num} traces) =" 
+                f"+str(np.around(mean_R,decimals =2))"
+                f" MOhm ", fontsize=12, va="top", ha="left")
+    plt.suptitle(f'Protocol type: current calmp - Input_res_check',fontsize=15)
+    plt.figtext(0.10, -0.10, f"sampling rate = {sampling_rate}" ,
+                fontsize=12, va="top", ha="left" )
+#    plt.figtext(0.10, -0.15, f"total recording time ="
+#                f" {np.around(total_time,decimals = 2)} s" ,
+#                fontsize=12, va="top", ha="left")
+    outfile = outdir +"/"+str(f.stem)+ f" input_R_check_.png"
+    plt.savefig(outfile,bbox_inches = 'tight')
+    print("-----> Saved to %s" % outfile)
+    fig = plt.close()
+    del(reader)
 
 
 def raw_trace(f):
@@ -186,11 +241,16 @@ def main(**kwargs):
     cell_sorted_results(outdir,cell_set)
 #    cell set will give the set of files which are of different protocols but
 #    from the same experiment.
-    for cell in cell_set:
+    file_out = outdir
+    for cell_no, cell in enumerate(cell_set):
         print(f"protocol set length  --> {len(cell)}")
+        print(f"************{cell}*********")
+        outdir = f"{outdir}/cell_{cell_no}"
 # f will have files in one set of protocols from a single experiment.        
         for f in cell:
-            print(str(f))
+
+            print(f"#############{outdir}#######")
+#            print(str(f))
             f_prot = protocol_name(f)
             print(f"protocol name = {f_prot[1]} protocol index number ="
                   f"{f_prot[0]}")
@@ -199,7 +259,13 @@ def main(**kwargs):
             prot = plot_selector(protocol_index)
             print(f"selected protocol to plot = {prot}")
             Vm_trail = raw_trace(f)
+            if prot =="series_res_check":
+                series_res_check(Vm_trail,f,outdir)
+            else:
+                print("not a series_res_check protocol")
 
+            del(Vm_trail)
+        outdir = file_out
 
 #        for pn, protocol in enumerate (cell):
 #
