@@ -6,7 +6,7 @@ __email__            = "anzalks@ncbs.res.in"
 
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
-warnings.simplefilter(action='ignore', category=UserWarning)
+#warnings.simplefilter(action='ignore', category=UserWarning)
 from pathlib import Path
 import neo.io as nio
 import numpy as np
@@ -139,6 +139,131 @@ def plot_selector(protocol_index):
         plot_function = "something not a protocol"
     return plot_function
 
+def threshold_protocol(Vm_trail, prot, f, outdir):
+    f_str = str(f)
+    reader = nio.AxonIO(f_str)
+    protocols = reader.read_raw_protocol()
+    protocol_unit = clamp_stat = protocols[2][0]
+    segments = reader.read_block().segments
+    sample_trace = segments[0].analogsignals[0]
+    sampling_rate = sample_trace.sampling_rate
+    trace_unit = str(sample_trace.units).split()[1]
+    global Threshold_voltage
+    fig = plt.figure(figsize=(16,5))
+    ax1 = fig.add_subplot(121)
+    ax2 = fig.add_subplot(122)
+    thresh_state = 0
+    iter_num = 0
+    trace_num = 0
+    for vi,v in  enumerate(Vm_trail):
+        iter_num +=1
+        trace = v[0]
+        time = v[1]
+        v = np.copy(trace)
+        t = np.copy(time)
+        print(f"itering through loop = {iter_num}")
+        print(f"v trace = {v}, t trace = {t}")
+        if thresh_state == 0:
+            print(f"passed threshstate {thresh_state}")
+            Vm = str(np.around(np.mean(v[0:299]),decimals=2))
+            del_Vm = str(np.around((np.mean(v[len(v)-300:len(v)])-np.mean(v[0:299])),
+                                   decimals= 2))
+            print(f"got the del vm value = {del_Vm}")
+            v_lowercut = np.copy(v)
+            t = time
+            v_lowercut[v_lowercut<-50] = -50
+            print(f"lower cut variable assigned = {v_lowercut}")
+            v_smooth = butter_bandpass_filter(v_lowercut,1, 500, sampling_rate, order=1)
+            print(f"band pass applied {v_smooth}")
+            peaks, peak_dict = signal.find_peaks(x=v_smooth, height=None,
+                                                 threshold=None,
+                                                 distance=None, prominence=5,
+                                                 width=None,wlen=None, rel_height=0.5,
+                                                 plateau_size=None)
+#            v_cut = butter_bandpass_filter(v_smooth,50, 500, sampling_rate, order=1)
+            v_peaks = v_smooth
+            print(f" value of v peaks = {v_peaks}")
+            t_peaks = t
+            thr_peak = 3
+#            print(f"peak t = {t_peaks}")
+#            print(f"peak value comaprison  {trace[peaks[0]]}")
+            if len(peaks)!= 0:
+                print(f"passed to ploting")
+                thresh_state = 1
+                dv = np.diff(v_smooth)
+                dt = np.diff(t)
+                dv_dt = dv/dt
+                dv_dt_max = np.max(dv/dt)
+                v_dt_max = np.where(dv_dt == dv_dt_max)[0]-20
+                t_dt_max = np.where(dv_dt == dv_dt_max)[0]-20
+                print(f" peak index on time axis = {time[peaks[0]]}")
+                ax1.scatter(time[peaks[0]-10], trace[peaks[0]-10], color='r',
+                            label = 'spike')
+                ax1.plot(t, v,alpha = 0.5, label = 'smoothened')
+                ax1.plot(time, trace, alpha = 0.5, label=f'raw trace no. {iter_num}')
+                ax1.scatter(time[t_dt_max],trace[v_dt_max], label = "threshold",
+                            color = 'k')
+                Threshold_voltage = "firing threshold = "
+                str(np.around(trace[v_dt_max][    0],decimals=2))
+                trace_num = iter_num
+                plt.figtext(0.10,0.0, Threshold_voltage+"mV", fontsize=12,
+                            va="top", ha="left")
+                plt.figtext(0.10,-0.05, f"membrane voltage = "
+                            f"{Vm} mV", fontsize=12, va="top", ha="left")
+                plt.figtext(0.10,-0.10, f"membrane voltage difference = "
+                            f"{del_Vm}mV", fontsize=12, va="top", ha="left")
+        P_traces= protocols[0]
+        iter_num_p = 0
+        Threshold_injection = "NA"
+        for p in P_traces:
+            iter_num_p +=1
+            if iter_num_p == 1:
+                for i in p:
+                    t_ = len(i)/sampling_rate
+                    t = np.linspace(0,float(t_), len(i))
+                    ax2.plot(i, color = 'g')
+
+            elif iter_num_p == trace_num:
+                c_inj = []
+                for i in p:
+                    t_ = len(i)/sampling_rate
+                    t = np.linspace(0,float(t_), len(i))
+                    ax2.plot(i, color = 'k')
+                    c_inj.append(i)
+                Threshold_injection = f"Injected current at threshold =  "
+                f"{str(np.max(c_inj))}"
+
+            elif iter_num_p == len(P_traces):
+                for i in p:
+                    t_ = len(i)/sampling_rate
+                    t = np.linspace(0,float(t_), len(i))
+                    ax2.plot(i, color = 'r')
+            First_inj = mpatches.Patch(color='green', label='First injection')
+            Thres_inj = mpatches.Patch(color='black', label='Threshold injection')
+            Last_inj = mpatches.Patch(color='red', label='Final injection')
+            ax2.legend(handles=[First_inj,Thres_inj,Last_inj])
+    plt.figtext(0.55,0.0, Threshold_injection+"pA", fontsize=12,
+                va="top", ha="left")
+    ax1.set_title('Recording')
+    ax1.set_ylabel(trace_unit)
+    ax1.set_xlabel('time(s)')
+    ax1.legend()
+    ax2.set_title('Protocol trace')
+    ax2.set_ylabel(protocol_unit)
+    ax2.set_xlabel('time(s)')
+    #        ax2.legend()
+    plt.suptitle(f'Protocol type: {prot}',fontsize=15)
+    plt.figtext(0.10, -0.15, f"sampling rate = {sampling_rate}" ,
+                fontsize=12, va="top", ha="left" )
+#    plt.figtext(0.10, -0.20, f"total recording time = {total_time}" ,
+#                fontsize=12, va="top", ha="left")
+    outfile = str(outdir)+"/"+str(f.stem)+ f" {prot}_{vi}.png"
+    plt.savefig(outfile,bbox_inches = 'tight')
+    print("-----> Saved to %s" % outfile)
+    fig = plt.close()
+
+
+
 def series_res_check(Vm_trail, prot, f, outdir):
     f_str = str(f)
     reader = nio.AxonIO(f_str)
@@ -155,9 +280,8 @@ def series_res_check(Vm_trail, prot, f, outdir):
     mean_R=[]
     for v in  enumerate(Vm_trail):
         iter_num +=1
-        trace_number = v[0]
         trace = v[1][0]
-        time = v[1][1]
+        time = v[1][0]
         Vb= np.mean(trace[int(sampling_rate*0.35):int(sampling_rate*0.38)])
         Vl= np.mean(trace[int(sampling_rate*0.15):int(sampling_rate*0.20)])
         input_R = (np.around((Vb-Vl),decimals=2)*1000)/(50)
@@ -214,7 +338,6 @@ def Base_line_protocol(Vm_trail, prot, f, outdir):
     RMP = []
     iter_num = 0
     for v in  enumerate(Vm_trail):
-        trace_number = v[0]
         trace = v[1][0]
         time = v[1][1]
         mean_RMP = np.mean(trace)
@@ -248,7 +371,7 @@ def Base_line_protocol(Vm_trail, prot, f, outdir):
     plt.suptitle(f'Protocol type: {prot}',fontsize=15)
     plt.figtext(0.10, -0.10, f"sampling rate = {sampling_rate}" ,
                 fontsize=12, va="top", ha="left" )
-    plt.figtext(0.10, -0.15, f" = cv of trace = {np.arounc(cv_rmp, decimals= 3)}" ,
+    plt.figtext(0.10, -0.15, f" = cv of trace = {np.around(cv_rmp, decimals= 3)}" ,
                 fontsize=12, va="top", ha="left")
     outfile = str(outdir)+"/"+str(f.stem)+ f" {prot}.png"
     plt.savefig(outfile,bbox_inches = 'tight')
@@ -268,13 +391,9 @@ def raw_trace(f):
     sample_trace = segments[0].analogsignals[0]
     sampling_rate = sample_trace.sampling_rate
     trace_unit = str(sample_trace.units).split()[1]
-    print(f"length of segments = {len(segments)}")
-    print(sampling_rate)
-    print(trace_unit)
     for si, segment in enumerate(segments):
         analog_signals = segment.analogsignals
         for trace in analog_signals:
-            print(f"length of each trace in the segment = {len(trace) }")
             v = trace
             v = np.ravel(v)
             v = v.magnitude
@@ -318,17 +437,23 @@ def main(**kwargs):
             print(f"selected protocol to plot = {prot}")
             Vm_trail = raw_trace(f)
             if prot =="series_res_check":
-                try:
-                    series_res_check(Vm_trail, prot, f, outdir)
-                except:
-                    pass
+#                try:
+                series_res_check(Vm_trail, prot, f, outdir)
+#                except:
+#                    pass
             elif prot == "rmp":
+#                try:
+                 Base_line_protocol(Vm_trail, prot, f, outdir)
+#                except:
+#                    pass
+            elif prot == "neuron_threshold":
                 try:
-                    Base_line_protocol(Vm_trail, prot, f, outdir)
+                    print("trying_protocol for threshold")
+                    threshold_protocol(Vm_trail, prot, f, outdir)
                 except:
                     pass
             else:
-                print("not a series_res_check protocol")
+                print("not an accounted protocol")
 
             del(Vm_trail)
         outdir = file_out
