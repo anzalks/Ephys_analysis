@@ -54,12 +54,12 @@ def multi_chan_plot(Vm_trail,f,sampling_rate):
             na +=1
             ta_.append(t)
             va_.append(v)
-            ax_array[2][0].plot(t,v, alpha = 0.5)
+            ax_array[0][0].plot(t,v, alpha = 0.5)
             if na == 3:
                 va_ = np.mean(va_, axis = 0)
                 ta_ = np.mean(ta_, axis = 0) 
 #                print(ta_,va_)
-                ax_array[2][0].plot(ta_,va_, color = 'b', linewidth=0.5)
+                ax_array[0][0].plot(ta_,va_, color = 'b', linewidth=0.5)
 
 
 #            ax_array[2].plot(Vm_trail[ind_i][1],Vm_trail[ind_i][0])
@@ -82,7 +82,7 @@ def multi_chan_plot(Vm_trail,f,sampling_rate):
             nc +=1
             vc_.append(v)
             tc_.append(t)
-            ax_array[0][0].plot(t,v, alpha = 0.5, label=f'trial {nc}')
+            ax_array[2][0].plot(t,v, alpha = 0.5, label=f'trial {nc}')
             v_lowercut = np.copy(v)
 #            v_lowercut[v_lowercut<-50] = -50
             time = np.copy(t)
@@ -104,7 +104,7 @@ def multi_chan_plot(Vm_trail,f,sampling_rate):
                 vc_ = np.mean(vc_, axis = 0)
                 tc_ = np.mean(tc_, axis = 0) 
 #                print(tc_,vc_)
-                ax_array[0][0].plot(tc_,vc_, color = 'r', linewidth=0.5, label
+                ax_array[0][1].plot(tc_,vc_, color = 'r', linewidth=0.5, label
                                    = f'mean response for {nc} trails')
                 ax_array[0][1].plot(tc_,vc_, color = 'r',alpha=0.3, linewidth=0.2)
 #            plt.subplot(rows,columns,ind_i+2)
@@ -483,7 +483,10 @@ def main(**kwargs):
     for fi, f in enumerate(f_list):
         print(f"analysing file: {str(f)} ")
         total_trace(f)
-        multi_chan_plot(Vm_trail,f,sampling_rate)
+        try:
+            multi_chan_plot(Vm_trail,f,sampling_rate)
+        except:
+            pass
 #        protocol_class(f)
 #        protocol_ckecker(protocol_type, protocols)
 #

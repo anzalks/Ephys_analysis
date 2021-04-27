@@ -410,6 +410,8 @@ def main(**kwargs):
     p = Path(kwargs['folder_path'])
     outdir = p/'results'
     outdir.mkdir(exist_ok=True,parents=True)
+    print("everything done")
+    quit()
 #    f_list = data_file_filter(p)
     f_list = list_files(p)
     f_list = data_file_filter(f_list)

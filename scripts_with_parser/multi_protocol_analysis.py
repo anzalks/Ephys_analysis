@@ -338,18 +338,22 @@ def main(**kwargs):
     List_files(p)
     for fi, f in enumerate(f_list):
         print(f"analysing file: {str(f)} ")
-        total_trace(f)
-        protocol_class(f)
-        protocol_ckecker(protocol_type, protocols)
-        if protocol_used == 'Threshold_check':
-            threshold_protocol(f, fi, Vm_trail, sampling_rate,trace_unit,
-                               protocol_unit)
-        elif protocol_used == 'Base_line_V':
-            Base_line_protocol(f, fi, Vm_trail, sampling_rate,trace_unit, protocol_unit)
-        elif protocol_used == 'input_res_check':
-            input_R_protocol(f, fi, Vm_trail, sampling_rate,trace_unit, protocol_unit)
-        else:
-            print("not threshold")
+        try:
+            total_trace(f)
+            protocol_class(f)
+            protocol_ckecker(protocol_type, protocols)
+            if protocol_used == 'Threshold_check':
+                threshold_protocol(f, fi, Vm_trail, sampling_rate,trace_unit,
+                                   protocol_unit)
+            elif protocol_used == 'Base_line_V':
+                Base_line_protocol(f, fi, Vm_trail, sampling_rate,trace_unit, protocol_unit)
+            elif protocol_used == 'input_res_check':
+                input_R_protocol(f, fi, Vm_trail, sampling_rate,trace_unit, protocol_unit)
+            else:
+                print("not threshold")
+        except:
+            pass
+                
 
 if __name__  == '__main__':
     import argparse
