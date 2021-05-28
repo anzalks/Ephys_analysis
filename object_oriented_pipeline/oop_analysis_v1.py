@@ -15,6 +15,8 @@ from itertools import islice
 from pprint import pprint
 import argparse
 import collections
+from matplotlib import gridspec
+
 
 class Args: pass 
 args_ = Args()
@@ -38,6 +40,23 @@ def list_files(p):
     f_list = []
     f_list=list(p.glob('**/*abf'))
     return f_list
+
+def plot_base(fig, panelTitle, plotPos, xlabel, ylabel,ylim, fig_text ):
+    spec = gridspec.GridSpec(ncols=2, nrows=2,
+                         width_ratios=[2, 1], wspace=0.5,
+                         hspace=0.5, height_ratios=[1, 2])
+    x,y = 3,7
+    ax = fig.add_subplot(x, y , plotPos)
+#    ax.set_aspect()
+#    ax.set_adjustable("datalim")
+    ax.set_xlabel(xlabel, fontsize=12)
+    ax.set_ylabel(ylabel, fontsize=12)
+    ax.text(0.2,1.2, panelTitle, fontsize=15, transform=ax.transAxes)
+    ax.text(0,-0.7, fig_text, fontsize=12, transform=ax.transAxes)
+    ax.set_ylim(ylim)
+    return ax
+
+
 
 
 def raw_trace(f):
@@ -213,68 +232,73 @@ def Base_line_grids(recording,sampling_rate):
     print(f"length of recording in {len(recording)}")
 
 
-def analysis5( protocol ):
+def analysis5( protocol, andor ):
     # do something
     print( "analysis2" )
 
-def analysis6( protocol ):
+def analysis6( protocol , andor ):
     # do something
     print( "analysis3" )
 
-def analysis7( protocol ):
+def analysis7( protocol , andor):
     # do something
     print( "analysis1" )
 
-def analysis8( protocol ):
+def analysis8( protocol , andor):
     # do something
     print( "analysis2" )
 
-def analysis9( protocol ):
+def analysis9( protocol , andor):
     # do something
     print( "analysis3" )
 
-def analysis10( protocol ):
+def analysis10( protocol , andor):
     # do something
     print( "analysis1" )
 
-def analysis11( protocol ):
+def analysis11( protocol , andor):
     # do something
     print( "analysis2" )
 
-def analysis12( protocol ):
+def analysis12( protocol , andor):
     # do something
     print( "analysis3" )
 
-def analysis13( protocol ):
+def analysis13( protocol , andor):
     # do something
     print( "analysis2" )
 
-def analysis14( protocol ):
+def analysis14( protocol , andor):
     # do something
     print( "analysis3" )       
 
 
-def Rmp_plot(recording,sampling_rate):
+def Rmp_plot(fig, recording,sampling_rate, pos):
      r = recording[0]
      t = r[0]
      v = r[1]
-     y_max = max(v)
-     y_min = min(v)
-     x_min = min(t)
-     x_max = max(t)
+     y_max = max(v)+5
+     y_min = min(v)-5
+     ylim = (y_min,y_max)
+     title = "Resting membrane potential"
+     xlabel = "time(s)"
+     ylabel = "membrane volatge (mV)"
+     plotPos = (pos)
      rmp = np.around(np.average(v), decimals = 2)
-     plt.plot(t,v)
-     plt.ylim(y_min-10, y_max+10 )
-     plt.title("Resting membrane voltage")
-     plt.xlabel("time (s)")
-     plt.ylabel("membrane voltage (mV)")
-     plt.figtext(0,0, f"resting membrane potential = {rmp} mV")
-     plt.show()
+     fig_text = "resting membrane potential= "+str(rmp)+" mV"
+     ax = plot_base(fig,title,plotPos,xlabel,ylabel, ylim, fig_text)
+     ax.plot(t,v)
      print( "analysis1" )
 
-def Series_res_plot( recording, sampling_rate ):
+def Series_res_plot(fig, recording, sampling_rate, pos ):
     print(f"length of recording in series res check {len(recording)}")
     mean_R = []
+    y_max_mean = []
+    y_min_mean = []
+    title = "Series resistance"
+    xlabel = "time(s)"
+    ylabel = "membrane volatage (mV)"
+    plotPos = (pos)
     sampling_rate = sampling_rate
     for i, r in enumerate(recording):
         r = recording[i]
@@ -282,41 +306,51 @@ def Series_res_plot( recording, sampling_rate ):
         v = r[1]
         y_max = max(v)
         y_min = min(v)
-        x_min = min(t)
-        x_max = max(t)
         trace = v
         time = t
-        plt.plot(t,v)
+        y_max_mean.append(y_max)
+        y_min_mean.append(y_min)
         Vl= np.mean(trace[int(sampling_rate*0.5):int(sampling_rate*0.55)])
         Vb= np.mean(trace[int(sampling_rate*0.15):int(sampling_rate*0.20)])
+        tl = time[int(sampling_rate*0.5)]
+        tb = time[int(sampling_rate*0.15)]
         print (f"reference points = {Vl, Vb}")
         input_R = (((Vl-Vb)*1000)/(-50))
         print(f"input_resistance = {input_R} MOhm")
         mean_R.append(input_R)
+    y_max_mean = np.mean(y_max_mean)
+    y_min_mean = np.mean(y_min_mean)
+    ylim = (y_min_mean, y_max_mean)
     mean_R =np.round(np.mean(mean_R), decimals=2)
     input_R = (mean_R - 3.5)
-    plt.ylim = (y_min-10, y_max+10)
-    plt.title("Series resistance")
-    plt.figtext(0,0, f"input res = {input_R} & series re = {mean_R} ",fontsize= 10)
-    plt.xlabel("time (s)")
-    plt.ylabel("membrane voltage (mV)")
-    plt.show()
+    fig_text = "series resitance = "+ str(mean_R) + " MOhm"
+    fig_text = "input resistance resitance = "+ str(input_R) + " MOhm"
+    ax = plot_base(fig, title,plotPos,xlabel,ylabel,ylim,fig_text)
+    ax.plot(t,v)
+    ax.scatter(tl,Vl,marker='o',color='r')
+    ax.scatter(tb,Vb,marker='o',color='k')
     print (f" series_res = {mean_R} input res = {input_R}" )
 
-def Threshold_check_plot( recording,sampling_rate):
+def Threshold_check_plot( fig, recording,sampling_rate, pos):
     print(f"length of recording in threshold check {len(recording)}")
+    y_max_mean = []
+    y_min_mean = []
     thresh_state =0
     sampling_rate = sampling_rate
+    title = "Cell threshold "
+    xlabel = "time(s)"
+    ylabel = "membr2ane volatage (mV)"
+    plotPos = (pos)
     for i, r in enumerate(recording):
         r = recording[i]
         t = r[0]
         v = r[1]
         y_max = max(v)
         y_min = min(v)
-        x_min = min(t)
-        x_max = max(t)
         trace = v
         time = t
+        y_max_mean.append(y_max)
+        y_min_mean.append(y_min)
         if thresh_state ==0:
             v_smooth = butter_bandpass_filter(trace,1,500,sampling_rate, order =1)
             peaks, peak_dict = signal.find_peaks(x=v_smooth, height=None,
@@ -335,54 +369,48 @@ def Threshold_check_plot( recording,sampling_rate):
                 dv_dt_max = np.max(dv_dt)
                 v_dt_max = np.where(dv_dt == dv_dt_max)[0]-20
                 t_dt_max = np.where(dv_dt == dv_dt_max)[0]-20
-                plt.plot(t,v)
+                x,y = t,v
+                peak_t,peak_v = time[peaks[0]-10],trace[peaks[0]-10]
+                thresh_t,thresh_v = time[t_dt_max],trace[v_dt_max]
                 plt.scatter(time[peaks[0]-10],trace[peaks[0]-10], color='r')
                 plt.scatter(time[t_dt_max],trace[v_dt_max], color='k')
                 print(f"max dv_dt locci = {v_dt_max , t_dt_max}")
+    y_max_mean = max(y_max_mean)+10
+    y_min_mean = min(y_min_mean)-10
+    ylim = (y_min_mean, y_max_mean)
     plt.ylim = (y_min-10, y_max+10)
-    plt.title("Cell threshold")
-    plt.figtext(0, 0, f"threshold voltage =  mV ",fontsize= 10)
-    plt.xlabel("time (s)")
-    plt.ylabel("membrane voltage (mV)")
-    plt.show()
+    fig_text = "thrshold voltage =  mV"
+    ax = plot_base(fig,title,plotPos,xlabel,ylabel,ylim,fig_text)
+    ax.plot(x,y)
+    ax.scatter(peak_t,peak_v, color='r')
+    ax.scatter(thresh_t,thresh_v, color='k')
 
-def Base_line_grids_plot(recording,sampling_rate):
+def optical_plot(fig, recording,sampling_rate, pos):
     print(recording)
+    y_max_mean = []
+    y_min_mean = []
+    thresh_state =0
+    sampling_rate = sampling_rate
     rows = 3
     va_,vb_,vc_ = [],[],[]
     ta_,tb_,tc_ = [],[],[]
+    va_mean,vb_mean,vc_mean = [],[],[]
+    ta_mean,tb_mean,tc_mean = [],[],[]
     na,nb,nc = 0,0,0
-    fig, ax_array = plt.subplots(rows,2)
     for ind_i,i in enumerate(recording):
         r = ind_i%rows
         a,b,c =(1%3,2%3,0)
         v = recording[ind_i][1]
         t = recording[ind_i][0]
         if r == a:
+            panelTitle_a = "cell recording"
+            plotPos_a = (pos)
+            xlabel_a = "time(s)"
+            ylabel_a = "mV"
+            fig_text_a = "."
             na +=1
             ta_.append(t)
             va_.append(v)
-            ax_array[0][0].plot(t,v, alpha = 0.5)
-            if na == 3:
-                va_ = np.mean(va_, axis = 0)
-                ta_ = np.mean(ta_, axis = 0) 
-#                print(ta_,va_)
-                ax_array[0][0].plot(ta_,va_, color = 'b', linewidth=0.5)
-        elif r == b:
-            nb +=1
-            vb_.append(v)
-            tb_.append(t)
-            ax_array[1][0].plot(t,v, alpha = 0.5)
-            if nb == 3:
-                vb_ = np.mean(vb_, axis = 0)
-                tb_ = np.mean(tb_, axis = 0) 
-                #                print(tb_,vb_)
-                ax_array[1][0].plot(tb_,vb_, color = 'k', linewidth=0.5)
-        elif r == c:
-            nc +=1
-            vc_.append(v)
-            tc_.append(t)
-            ax_array[2][0].plot(t,v, alpha = 0.5, label=f'trial {nc}')
             v_lowercut = np.copy(v)
             #            v_lowercut[v_lowercut<-50] = -50
             time = np.copy(t)
@@ -397,39 +425,62 @@ def Base_line_grids_plot(recording,sampling_rate):
             #            peaks_t = time
             peaks_t = t[peaks[0]-10]
             peaks_v = v[peaks[0]-10]
-            ax_array[0][1].scatter(peaks_t,peaks_v,alpha=0.5, marker='.',
-                                   label = f'peak response in trial {nc}')
-            print(f"peaks = {peaks_v}, {peaks_t}")
+            if na == 3:
+                va_mean = np.mean(va_, axis = 0)
+                ta_mean = np.mean(ta_, axis = 0)
+                y_max = max(va_mean)+5
+                y_min = min(va_mean)-5
+                ylim_a = (y_min,y_max)
+        elif r == b:
+            panelTitle_b = "photodiode"
+            plotPos_b = (pos+7)
+            xlabel_b = "time(s)"
+            ylabel_b = "pA"
+            fig_text_b = " "
+            nb +=1
+            vb_.append(v)
+            tb_.append(t)
+            if nb == 3:
+                vb_mean = np.mean(vb_, axis = 0)
+                tb_mean = np.mean(tb_, axis = 0)
+                y_max = max(vb_mean)+5
+                y_min = min(vb_mean)-5
+                ylim_b = (y_min,y_max)
+                #                print(tb_,vb_)
+        elif r == c:
+            panelTitle_c = "ttl"
+            plotPos_c = (pos+14)
+            xlabel_c = "time(s)"
+            ylabel_c = "v"
+            fig_text_c = " "
+            nc +=1
+            vc_.append(v)
+            tc_.append(t)
             if nc == 3:
-                vc_ = np.mean(vc_, axis = 0)
-                tc_ = np.mean(tc_, axis = 0)
-                #                print(tc_,vc_)
-                ax_array[0][1].plot(tc_,vc_, color = 'r', linewidth=0.5, label
-                                    = f'mean response for {nc} trails')
-                ax_array[0][1].plot(tc_,vc_, color = 'r',alpha=0.3, linewidth=0.2)
-    ax_array[2][0].set_title('TTL')
-    ax_array[2][0].set_xlabel('time(s)')
-#    ax_array[2].set_ylim(-0.5,2.5)
-#    ax_array[2].set_xlim(0.2,0.5)
-    ax_array[2][0].set_ylabel('V')
-    ax_array[1][0].set_title('photo diode')
-#    ax_array[1].set_ylim(2,7.5)
-#    ax_array[1].set_xlim(0.2,0.5)
-    ax_array[1][0].set_ylabel('pA')
-    ax_array[0][0].set_title('cell trace')
-    ax_array[0][0].set_ylim(-100,5)
-    ax_array[0][0].set_ylabel('mV')
-#    ax_array[0].set_xlim(0.2,0.5)
-#    plt.title("three channel recordings")
-    ax_array[0][1].set_title('Response peak spread')
-    ax_array[0][1].set_xlabel('time(s)')
-    ax_array[0][1].set_ylim(-100,5)
+                vc_mean = np.mean(vc_, axis = 0)
+                tc_mean = np.mean(tc_, axis = 0)
+                y_max = max(vc_mean)+5
+                y_min = min(vc_mean)-5
+                ylim_c = (y_min,y_max)
+    axa = plot_base(fig, panelTitle_a, plotPos_a,
+              xlabel_a, ylabel_a, ylim_a, fig_text_a)
 
-    ax_array[1,1].axis('off')
-    ax_array[2,1].axis('off')
-    fig.legend(title="Legend",borderaxespad=1, loc="lower right")
-    plt.tight_layout()
-    plt.show()
+#    for i,ind in enumerate(va_):
+#        axa.plot(ta_[i],va_[i], alpha = 0.3)
+    axa.plot(ta_mean, va_mean, color = 'r')
+    axa.scatter(peaks_t, peaks_v, alpha=0.5, color='r')
+    axb = plot_base(fig, panelTitle_b, plotPos_b,
+                    xlabel_b, ylabel_b, ylim_b, fig_text_b)
+#    for i,ind in enumerate(vb_):
+#        axb.plot(tb_[i],vb_[i],alpha=0.3)
+    axb.plot(tb_mean, vb_mean, color = 'k')
+    axc = plot_base(fig, panelTitle_c, plotPos_c,
+              xlabel_c, ylabel_c, ylim_c, fig_text_c)
+#    for i,ind in enumerate(vc_):
+#        axc.plot(tc_[i],vc_[i],alpha = 0.3)
+    axc.plot(tc_mean, vc_mean, color = 'b')
+
+#    ax1.scatter(peaks_t,peaks_v, marker='.')
 
 
 def plot5( protocol ):
@@ -474,55 +525,45 @@ def plot14( protocol ):
     print( "analysis3" ) 
 
 
-proto_map = { "1_RMP_gap_free_1min": ( Rmp, Rmp_plot ), 
-             "2_Input_resistance_50pA_600ms": (Series_res, Series_res_plot), 
+proto_map = { "1_RMP_gap_free_1min": ( Rmp, Rmp_plot, 1 ), 
+             "2_Input_resistance_-20pA_350ms": (Series_res, Series_res_plot, 8), 
              "3_cell_threshold_10pA_step_-50_140pA_500ms": (Threshold_check,
-                                                            Threshold_check_plot ),
+                                                            Threshold_check_plot, 15),
              "4_Baseline_point_by_point_response_42_points_24_x_24_grid_size_50ms_pulse_200ms_spaced_pulse_train_3_sweeps":
-             (Base_line_grids,Base_line_grids_plot),
-             "5_Baseline_Excitation_point_by_point_response_25"
-             "_x_25_grid_size_50ms_pulse_200ms_spaced":(analysis5,plot5),
-             "6_Baseline_Inhibition_point_by_point_response"
-             "_25_x_25_grid_size_50ms_pulse_200ms_spaced":(analysis6,plot6),
-             "7_Baseline_5_T_1_1_3_3_patterns - Copy"
-             "_times_repeat":(analysis7,plot7),
-             "8_10_Pattern_baseline_excitation_0mV_holding"
-             "_25X25_single_point":(analysis8,plot8),
-             "9_10_Pattern_baseline_Inhibition-70mV_holding"
-             "_25X25_single_point":(analysis9,plot9),
-             "10_Pattern_training_every_2s_50ms_frames_3_times"
-             "_repeat_one_depolarised_frame":(analysis10,plot10),
-             "11_Inhibition_point_by_point_response_25_x_25"
-             "_grid_size_50ms_pulse_200ms_spaced":(analysis11,plot11),
-             "12_Inhibition_point_by_point_response_25_x_25"
-             "_grid_size_50ms_pulse_200ms_spaced":(analysis12,plot12),
-             "13_10_Pattern_Inhibition-70mV_holding_25X25_single_point":(analysis13,plot13),
-             "14_10_Pattern_Inhibition-70mV_holding_25X25_single_point":(analysis14,plot14)
+             (Base_line_grids,optical_plot, 2),
+             "5_Excitation_point_by_point_response_42_points_24_x_24_grid_size_50ms_pulse_200ms_spaced_pulse_train_3_sweeps":(analysis5, optical_plot, 3),
+             "6_Inhibition_point_by_point_response_42_points_24_x_24_grid_size_50ms_pulse_200ms_spaced_pulse_train_3_sweeps - Copy":(analysis6,optical_plot,4),
+             "7_Baseline_5_T_1_1_3_3_patterns - Copy":(analysis7, optical_plot, 5) ,
+#             "8_10_Pattern_baseline_excitation_0mV_holding"
+#             "_25X25_single_point":(analysis8,optical_plot),
+             "9_Inhibition_5_T_1_1_3_3_patterns - Copy":(analysis9,optical_plot, 6),
+             "10_Training_5_T_1_1_3_3_patterns":(analysis10,optical_plot, 7),
+#             "11_Inhibition_point_by_point_response_25_x_25"
+#             "_grid_size_50ms_pulse_200ms_spaced":(analysis11,optical_plot),
+#             "12_Inhibition_point_by_point_response_25_x_25"
+#             "_grid_size_50ms_pulse_200ms_spaced":(analysis12,optical_plot),
+#             "13_10_Pattern_Inhibition-70mV_holding_25X25_single_point":(analysis13,optical_plot),
+#             "14_10_Pattern_Inhibition-70mV_holding_25X25_single_point":(analysis14,optical_plot)
 
             }
 
 proto_sequence = ["1_RMP_gap_free_1min", 
-                  "2_Input_resistance_50pA_600ms", 
+                  "2_Input_resistance_-20pA_350ms", 
                   "3_cell_threshold_10pA_step_-50_140pA_500ms",
                   "4_Baseline_point_by_point_response_42_points_24_x_24_grid_size_50ms_pulse_200ms_spaced_pulse_train_3_sweeps",
-                  "5_Baseline_Excitation_point_by_point_response_25"
-                  "_x_25_grid_size_50ms_pulse_200ms_spaced",
-                  "6_Baseline_Inhibition_point_by_point_response"
-                  "_25_x_25_grid_size_50ms_pulse_200ms_spaced",
-                  "7_Baseline_5_T_1_1_3_3_patterns - Copy"
-                  "_times_repeat",
-                  "8_10_Pattern_baseline_excitation_0mV_holding"
-                  "_25X25_single_point",
-                  "9_10_Pattern_baseline_Inhibition-70mV_holding"
-                  "_25X25_single_point",
-                  "10_Pattern_training_every_2s_50ms_frames_3_times"
-                  "_repeat_one_depolarised_frame",
-                  "11_Inhibition_point_by_point_response_25_x_25"
-                  "_grid_size_50ms_pulse_200ms_spaced",
-                  "12_Inhibition_point_by_point_response_25_x_25"
-                  "_grid_size_50ms_pulse_200ms_spaced",
-                  "13_10_Pattern_Inhibition-70mV_holding_25X25_single_point",
-                  "14_10_Pattern_Inhibition-70mV_holding_25X25_single_point"
+                  "5_Excitation_point_by_point_response_42_points_24_x_24_grid_size_50ms_pulse_200ms_spaced_pulse_train_3_sweeps",
+                  "6_Inhibition_point_by_point_response_42_points_24_x_24_grid_size_50ms_pulse_200ms_spaced_pulse_train_3_sweeps - Copy",
+                  "7_Baseline_5_T_1_1_3_3_patterns - Copy",
+#                  "8_10_Pattern_baseline_excitation_0mV_holding"
+#                  "_25X25_single_point",
+                  "9_Inhibition_5_T_1_1_3_3_patterns - Copy",
+                  "10_Training_5_T_1_1_3_3_patterns",
+#                  "11_Inhibition_point_by_point_response_25_x_25"
+#                  "_grid_size_50ms_pulse_200ms_spaced",
+#                  "12_Inhibition_point_by_point_response_25_x_25"
+#                  "_grid_size_50ms_pulse_200ms_spaced",
+#                  "13_10_Pattern_Inhibition-70mV_holding_25X25_single_point",
+#                  "14_10_Pattern_Inhibition-70mV_holding_25X25_single_point"
                  ] 
 
 
@@ -538,6 +579,7 @@ class Protocol:
         print(prot_name)
         self.analysis_func = proto_map[prot_name][0]
         self.plot_func = proto_map[prot_name][1]
+        self.plot_pos = proto_map[prot_name][2]
         self.recording = raw_trace(abf)
         self.protocol_raw_data = reader.read_raw_protocol()
         self.protol_trace = protol_trace(self.protocol_raw_data)
@@ -579,14 +621,24 @@ def main():
         print(protocols[p].protocol_name)
 
     # Do analysis
-    for p in proto_sequence[0:4]:
+    
+    for p in proto_sequence:
         print(protocols[p].protocol_name)
-        print(f"recording length = {len(protocols[p].recording)}")
+        print(protocols[p].plot_pos)
         protocols[p].analysis_func(protocols[p].recording,protocols[p].sampling_rate)
 
     # Do plotting
-    for p in proto_sequence[0:4]:
-        protocols[p].plot_func(protocols[p].recording,protocols[p].sampling_rate)
+    fig = plt.figure(figsize = (30,10))
+    for p in proto_sequence:
+        print(f"ploting file {protocols[p].abf}")
+        pos = protocols[p].plot_pos
+        try:
+            protocols[p].plot_func(fig, protocols[p].recording,
+                                   protocols[p].sampling_rate, pos)
+        except:
+            pass
+    fig.tight_layout()
+    plt.show()
 
 if __name__  == '__main__':
     main()
