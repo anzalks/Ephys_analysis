@@ -41,6 +41,44 @@ def list_files(p):
     f_list=list(p.glob('**/*abf'))
     return f_list
 
+def list_patterns(p):
+    p =Path(p)
+    f_list = []
+    f_list=list(p.glob('**/*txt'))
+    return f_list
+
+def load_text(txt):
+    str(txt)
+    txt_read = np.loadtxt(txt, comments="#", delimiter=" ", dtype=int, unpack=True)
+    txt_read = np.transpose(txt_read) #transposing so that the first index is the first frame
+
+    Framedict = {}
+    for i in range(len(txt_read)):
+        fr_no = txt_read[i][0]
+        num_of_Cols = txt_read[i][1]
+        num_of_Rows = txt_read[i][2]
+        brightidx = txt_read[i][3:]
+        zeromatrix = np.zeros([num_of_Rows, num_of_Cols])
+        brightidx2D = np.transpose(np.unravel_index(brightidx-1, (num_of_Rows,num_of_Cols))) #Getting     2d coordinates from linear coord
+        for j in range(len(brightidx2D)):
+            zeromatrix[brightidx2D[j][0]][brightidx2D[j][1]] = 1 #Replacing the zeors with 1s
+        Framedict[fr_no] = zeromatrix
+
+#    print(Framedict)
+    return Framedict
+
+def plot_projections(p, projections):
+    p = str(p)
+    for ind,i in enumerate(projections):
+        for ind_l,l in enumerate(i):
+            fr = i[l]
+            plt.imshow(fr)
+            plt.show()
+            plt.pause(0.05)
+            plt.savefig(f"{p}_{ind}_{ind_l}.png")
+            plt.close()
+
+
 def plot_base(fig, panelTitle, plotPos, xlabel, ylabel,ylim, fig_text ):
     spec = gridspec.GridSpec(ncols=2, nrows=2,
                          width_ratios=[2, 1], wspace=0.5,
@@ -231,28 +269,106 @@ def Base_line_grids(recording,sampling_rate):
     print(f"length of rec 1 {recording[0]}")
     print(f"length of recording in {len(recording)}")
 
-
-def analysis5( protocol, andor ):
-    # do something
-    print( "analysis2" )
-
-def analysis6( protocol , andor ):
+def analysis5( protocol , andor ):
     # do something
     print( "analysis3" )
 
-def analysis7( protocol , andor):
-    # do something
-    print( "analysis1" )
 
-def analysis8( protocol , andor):
-    # do something
-    print( "analysis2" )
+def Ttl_dict(fig, recording,sampling_rate, pos):
+    y_max_mean = []
+    y_min_mean = []
+    thresh_state =0
+    sampling_rate = sampling_rate
+    rows = 3
+    va_,vb_,vc_ = [],[],[]
+    ta_,tb_,tc_ = [],[],[]
+    va_mean,vb_mean,vc_mean = [],[],[]
+    ta_mean,tb_mean,tc_mean = [],[],[]
+    na,nb,nc = 0,0,0
+    for ind_i,i in enumerate(recording):
+        r = ind_i%rows
+        a,b,c =(1%3,2%3,0)
+        v = recording[ind_i][1]
+        t = recording[ind_i][0]
+        if r == a:
+            panelTitle_a = "cell recording"
+            plotPos_a = (pos)
+            xlabel_a = "time(s)"
+            ylabel_a = "mV"
+            fig_text_a = "."
+            na +=1
+            ta_.append(t)
+            va_.append(v)
+            v_lowercut = np.copy(v)
+            #            v_lowercut[v_lowercut<-50] = -50
+            time = np.copy(t)
+            v_smooth = v_lowercut
+            #            v_smooth = np.ma.average(v_lowercut,axis=0)
+            #            v_smooth = butter_bandpass_filter(v_lowercut,1,20, sampling_rate, order=1)
+            peaks = signal.find_peaks(x=v_smooth, height=-80,  threshold=None,
+                                      distance=50,
+                                      prominence=2.5, width=100, wlen=None,
+                                      rel_height=1,plateau_size=None)
+            #            peaks_v = v_smooth
+            #            peaks_t = time
+            peaks_t = t[peaks[0]-10]
+            peaks_v = v[peaks[0]-10]
+            if na == 3:
+                va_mean = np.mean(va_, axis = 0)
+                ta_mean = np.mean(ta_, axis = 0)
+                y_max = max(va_mean)+5
+                y_min = min(va_mean)-5
+                ylim_a = (y_min,y_max)
+        elif r == b:
+            panelTitle_b = "photodiode"
+            plotPos_b = (pos+7)
+            xlabel_b = "time(s)"
+            ylabel_b = "pA"
+            fig_text_b = " "
+            nb +=1
+            vb_.append(v)
+            tb_.append(t)
+            if nb == 3:
+                vb_mean = np.mean(vb_, axis = 0)
+                tb_mean = np.mean(tb_, axis = 0)
+                y_max = max(vb_mean)+5
+                y_min = min(vb_mean)-5
+                ylim_b = (y_min,y_max)
+                #                print(tb_,vb_)
+        elif r == c:
+            panelTitle_c = "ttl"
+            plotPos_c = (pos+14)
+            xlabel_c = "time(s)"
+            ylabel_c = "v"
+            fig_text_c = " "
+            nc +=1
+            vc_.append(v)
+            tc_.append(t)
+            if nc == 3:
+                vc_mean = np.mean(vc_, axis = 0)
+                tc_mean = np.mean(tc_, axis = 0)
+                y_max = max(vc_mean)+5
+                y_min = min(vc_mean)-5
+                ylim_c = (y_min,y_max)
+    axa = plot_base(fig, panelTitle_a, plotPos_a,
+              xlabel_a, ylabel_a, ylim_a, fig_text_a)
+                                                                                                   def analysis6( protocol , andor ):
+    for i,ind in enumerate(va_):                                                                       # do something
+        axa.plot(ta_[i],va_[i], alpha = 0.3)                                                           print( "analysis3" )
+    axa.plot(ta_mean, va_mean, color = 'r')
+    axa.scatter(peaks_t, peaks_v, alpha=0.5, color='r')                                            def analysis7( protocol , andor):
+    axb = plot_base(fig, panelTitle_b, plotPos_b,                                                      # do something
+                    xlabel_b, ylabel_b, ylim_b, fig_text_b)                                            print( "analysis1" )
+    for i,ind in enumerate(vb_):
+        axb.plot(tb_[i],vb_[i],alpha=0.3)                                                          def analysis8( protocol , andor):
+    axb.plot(tb_mean, vb_mean, color = 'k')                                                            # do something
+    axc = plot_base(fig, panelTitle_c, plotPos_c,                                                      print( "analysis2" )
+              xlabel_c, ylabel_c, ylim_c, fig_text_c)
+    for i,ind in enumerate(vc_):                                                                   def analysis9( protocol , andor):
+        axc.plot(tc_[i],vc_[i],alpha = 0.3)                                                            # do something
+    axc.plot(tc_mean, vc_mean, color = 'b')                                                            print( "analysis3" )
 
-def analysis9( protocol , andor):
-    # do something
-    print( "analysis3" )
-
-def analysis10( protocol , andor):
+#    ax1.scatter(peaks_t,peaks_v, marker='.')                                                      def analysis10( protocol , andor):
     # do something
     print( "analysis1" )
 
@@ -465,19 +581,19 @@ def optical_plot(fig, recording,sampling_rate, pos):
     axa = plot_base(fig, panelTitle_a, plotPos_a,
               xlabel_a, ylabel_a, ylim_a, fig_text_a)
 
-#    for i,ind in enumerate(va_):
-#        axa.plot(ta_[i],va_[i], alpha = 0.3)
+    for i,ind in enumerate(va_):
+        axa.plot(ta_[i],va_[i], alpha = 0.3)
     axa.plot(ta_mean, va_mean, color = 'r')
     axa.scatter(peaks_t, peaks_v, alpha=0.5, color='r')
     axb = plot_base(fig, panelTitle_b, plotPos_b,
                     xlabel_b, ylabel_b, ylim_b, fig_text_b)
-#    for i,ind in enumerate(vb_):
-#        axb.plot(tb_[i],vb_[i],alpha=0.3)
+    for i,ind in enumerate(vb_):
+        axb.plot(tb_[i],vb_[i],alpha=0.3)
     axb.plot(tb_mean, vb_mean, color = 'k')
     axc = plot_base(fig, panelTitle_c, plotPos_c,
               xlabel_c, ylabel_c, ylim_c, fig_text_c)
-#    for i,ind in enumerate(vc_):
-#        axc.plot(tc_[i],vc_[i],alpha = 0.3)
+    for i,ind in enumerate(vc_):
+        axc.plot(tc_[i],vc_[i],alpha = 0.3)
     axc.plot(tc_mean, vc_mean, color = 'b')
 
 #    ax1.scatter(peaks_t,peaks_v, marker='.')
@@ -600,45 +716,58 @@ def main():
     # Argument parser.
     description = '''Analysis script for abf files.'''
     parser = argparse.ArgumentParser(description=description)
-    parser.add_argument('--folder-path', '-f'
+    parser.add_argument('--folder_files', '-f'
             , required = False, default ='./', type=str
             , help = 'path of folder with  abf files '
             )
+    parser.add_argument('--folder_patterns', '-p'
+            , required = False, default ='./', type=str
+            , help = 'path of folder with grid info text'
+            )
     args = parser.parse_args()
-    fpaths = list_files( args.folder_path )
+    fpaths = list_files( args.folder_files )
 #    print(fpaths)
-    protocols = {}
-    for f in fpaths:
-        f =str(f)
-        if f.split(".")[-1] == "abf":
-            try:
-                proto = Protocol( f )
-                protocols[proto.protocol_name] = proto
-            except:
-               pass 
-    print(f"protocols assigned total protocols = {len(protocols)}")
-    for p in protocols:
-        print(protocols[p].protocol_name)
+    ppaths = list_patterns( args.folder_patterns )
+#    print(ppaths)
+#    print(fpaths)
+    projections = []
+    for p in ppaths:
+        a = load_text(p)
+        projections.append(a)
+    plot_projections(p, projections)
 
-    # Do analysis
-    
-    for p in proto_sequence:
-        print(protocols[p].protocol_name)
-        print(protocols[p].plot_pos)
-        protocols[p].analysis_func(protocols[p].recording,protocols[p].sampling_rate)
-
-    # Do plotting
-    fig = plt.figure(figsize = (30,10))
-    for p in proto_sequence:
-        print(f"ploting file {protocols[p].abf}")
-        pos = protocols[p].plot_pos
-        try:
-            protocols[p].plot_func(fig, protocols[p].recording,
-                                   protocols[p].sampling_rate, pos)
-        except:
-            pass
-    fig.tight_layout()
-    plt.show()
-
+#    protocols = {}
+#    for f in fpaths:
+#        f =str(f)
+#        if f.split(".")[-1] == "abf":
+#            try:
+#                proto = Protocol( f )
+#                protocols[proto.protocol_name] = proto
+#            except:
+#               pass 
+#    print(f"protocols assigned total protocols = {len(protocols)}")
+#    for p in protocols:
+#        print(protocols[p].protocol_name)
+#
+#    # Do analysis
+#    
+#    for p in proto_sequence:
+#        print(protocols[p].protocol_name)
+#        print(protocols[p].plot_pos)
+#        protocols[p].analysis_func(protocols[p].recording,protocols[p].sampling_rate)
+#
+#    # Do plotting
+#    fig = plt.figure(figsize = (30,10))
+#    for p in proto_sequence:
+#        print(f"ploting file {protocols[p].abf}")
+#        pos = protocols[p].plot_pos
+#        try:
+#            protocols[p].plot_func(fig, protocols[p].recording,
+#                                   protocols[p].sampling_rate, pos)
+#        except:
+#            pass
+#    fig.tight_layout()
+#    plt.show()
+#
 if __name__  == '__main__':
     main()
